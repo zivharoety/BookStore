@@ -1,9 +1,7 @@
 package bgu.spl.mics.application.passiveObjects;
-import bgu.spl.mics.MessageBusImpl;
 
 import java.io.*;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import static bgu.spl.mics.application.passiveObjects.OrderResult.*;
@@ -17,7 +15,9 @@ import static bgu.spl.mics.application.passiveObjects.OrderResult.*;
  * <p>
  * You can add ONLY private fields and methods to this class as you see fit.
  */
-public class Inventory {
+
+
+public class Inventory implements Serializable {
 		public Map<String,BookInventoryInfo> map;
 
 		private Inventory(){
@@ -62,7 +62,7 @@ public class Inventory {
 		// checking whether it is in stock
 		if(!map.get(book).getSem().tryAcquire())
 			return NOT_IN_STOCK;
-		map.get(book).reduceAmount();// reducing amount
+		map.get(book).reduceAmount(); // reduce amount
 		return SUCCESSFULLY_TAKEN;
 	}
 
@@ -88,19 +88,23 @@ public class Inventory {
      * their respective available amount in the inventory. 
      * This method is called by the main method in order to generate the output.
      */
-	public void printInventoryToFile(String filename){
-		try {
-			FileOutputStream toPrint = new FileOutputStream(new File(filename));
-			ObjectOutputStream toWrite = new ObjectOutputStream(toPrint);
-			toWrite.writeObject(map);
-			toWrite.flush();//to check if really necessary.
-			toWrite.close();
+	public void printInventoryToFile(String filename) {
+		HashMap<String, Integer> finalInventory = new HashMap<>();
+		for (String s : map.keySet()) {
+			finalInventory.put(s, map.get(s).getAmountInInventory());
+		}
+		try (FileOutputStream toPrint = new FileOutputStream(new File(filename))) {
+			try (ObjectOutputStream toWrite = new ObjectOutputStream(toPrint)) {
+				toWrite.writeObject(finalInventory);
+			} catch (FileNotFoundException ignord) {
 
-		} catch (FileNotFoundException ignord) {
+			} catch (IOException ignord) {
 
-		} catch (IOException ignord) {
-
+			}
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 	}
-
 }

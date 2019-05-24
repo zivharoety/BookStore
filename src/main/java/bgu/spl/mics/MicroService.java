@@ -2,6 +2,7 @@ package bgu.spl.mics;
 
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.concurrent.CountDownLatch;
 
 /**
  * The MicroService is an abstract class that any micro-service in the system
@@ -22,13 +23,14 @@ import java.util.LinkedList;
  * <p>
  */
 public abstract class MicroService implements Runnable {
-    protected MessageBus bus;
+    private MessageBus bus;
     private boolean terminated = false;
     private final String name;
     private Future myFuture;
     private HashMap<Class<? extends Message>,Callback> myCallback ;
-    protected Message toDo;
+    private Message toDo;
     private boolean isRegister;
+
     /**
      * @param name the micro-service name (used mainly for debugging purposes -
      *             does not have to be unique)
@@ -38,6 +40,7 @@ public abstract class MicroService implements Runnable {
         this.name = name;
         myCallback = new HashMap<>();
         isRegister = false;
+
     }
 
     /**
@@ -115,7 +118,6 @@ public abstract class MicroService implements Runnable {
      * @param b The broadcast message to send
      */
     protected final void sendBroadcast(Broadcast b) {
-
         bus.sendBroadcast(b);
     }
 
@@ -130,7 +132,6 @@ public abstract class MicroService implements Runnable {
      *               {@code e}.
      */
     protected final <T> void complete(Event<T> e, T result) {
-
         bus.complete(e,result);
     }
 
@@ -144,7 +145,6 @@ public abstract class MicroService implements Runnable {
      * message.
      */
     protected final void terminate() {
-
         this.terminated = true;
     }
 
@@ -172,10 +172,12 @@ public abstract class MicroService implements Runnable {
                 else{
                     myCallback.get(toDo.getClass()).call(toDo);}
             } catch (InterruptedException ignored) {
+                Thread.currentThread().interrupt();
                 notifyAll();
             }
         }
         bus.unregister(this);
     }
+
 
 }

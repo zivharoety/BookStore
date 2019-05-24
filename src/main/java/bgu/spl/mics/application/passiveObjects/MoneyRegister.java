@@ -16,7 +16,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * <p>
  * You can add ONLY private fields and methods to this class as you see fit.
  */
-public class MoneyRegister {
+public class MoneyRegister implements Serializable {
 	AtomicInteger totalEarning;
 	LinkedList<OrderReceipt> recipts;
 	AtomicReference<LinkedList<OrderReceipt>> orders;
@@ -33,7 +33,6 @@ public class MoneyRegister {
 		private static MoneyRegister instance = new MoneyRegister();
 	}
 	public static MoneyRegister getInstance() {
-		//TODO: Implement this
 		return MoneyRegisterHolder.instance;
 	}
 	
@@ -52,7 +51,6 @@ public class MoneyRegister {
      * Retrieves the current total earnings of the store.  
      */
 	public int getTotalEarnings() {
-		//TODO: Implement this
 		return totalEarning.get();
 	}
 	
@@ -72,17 +70,18 @@ public class MoneyRegister {
      * This method is called by the main method in order to generate the output.. 
      */
 	public void printOrderReceipts(String filename) {
-		try {
-			FileOutputStream toPrint = new FileOutputStream(new File(filename));
-			ObjectOutputStream toWrite = new ObjectOutputStream(toPrint);
+		try (FileOutputStream toPrint = new FileOutputStream(new File(filename))) {
+			try(ObjectOutputStream toWrite = new ObjectOutputStream(toPrint)){
 			toWrite.writeObject(recipts);
-			toWrite.flush();//to check if really necessary.
-			toWrite.close();
-
 		} catch (FileNotFoundException ignord) {
 
 		} catch (IOException ignord) {
 
+		}
+	} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 	}
 }

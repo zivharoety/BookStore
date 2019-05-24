@@ -1,5 +1,6 @@
 package bgu.spl.mics.application.passiveObjects;
 
+import java.io.Serializable;
 import java.util.concurrent.Semaphore;
 
 /**
@@ -8,7 +9,7 @@ import java.util.concurrent.Semaphore;
  * <p>
  * You may add fields and methods to this class as you see fit (including public methods).
  */
-public class BookInventoryInfo {
+public class BookInventoryInfo implements Serializable {
 	private String bookTitle;
 	private int price;
 	private int amount;
@@ -19,7 +20,6 @@ public class BookInventoryInfo {
 		this.bookTitle=bookTitle;
 		this.price=price;
 		this.amount=amount;
-		//this.sem = new Semaphore(amount);
 	}
 
 	/**
@@ -50,7 +50,7 @@ public class BookInventoryInfo {
 	}
 
 	public void reduceAmount(){
-		amount -= amount;
+		amount = amount -1;
 	}
 
 	public Semaphore getSem() {

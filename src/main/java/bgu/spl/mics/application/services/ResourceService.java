@@ -1,10 +1,17 @@
 package bgu.spl.mics.application.services;
 
+import bgu.spl.mics.Future;
 import bgu.spl.mics.MicroService;
 import bgu.spl.mics.application.messages.FetchVehicle;
 import bgu.spl.mics.application.messages.ReleaseVehicle;
+import bgu.spl.mics.application.messages.Tick;
 import bgu.spl.mics.application.passiveObjects.ResourcesHolder;
 import bgu.spl.mics.application.passiveObjects.*;
+
+import java.util.LinkedList;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * ResourceService is in charge of the store resources - the delivery vehicles.
@@ -17,20 +24,45 @@ import bgu.spl.mics.application.passiveObjects.*;
  */
 public class ResourceService extends MicroService{
 		private	ResourcesHolder resource;
-	public ResourceService(String name) {
+		private CountDownLatch countDown;
+		private static AtomicInteger resourceCounter = new AtomicInteger(0);
+		private static ConcurrentLinkedQueue<Future<DeliveryVehicle>> waitingFuture = new ConcurrentLinkedQueue<>();
+
+	public ResourceService(String name, CountDownLatch countD) {
 		super(name);
+		countDown = countD;
 		resource = ResourcesHolder.getInstance();
+		resourceCounter.getAndIncrement();
 	}
 
 	@Override
 	protected void initialize() {
 		subscribeEvent(FetchVehicle.class, (FetchVehicle message)->{
-			complete(message,resource.acquireVehicle().get());
+			Future<DeliveryVehicle> toReturn = resource.acquireVehicle();
+			if(!toReturn.isDone()){
+				waitingFuture.add(toReturn);
+			}
+			complete(message,toReturn);
 		});
 		subscribeEvent(ReleaseVehicle.class, (ReleaseVehicle message)->{
 			resource.releaseVehicle(message.getVehicle());
 		});
+		subscribeBroadcast(Tick.class , (Tick message)->{
+			if(message.getDuration()==message.getTick()){
+				if(resourceCounter.get() == 1){
+					while(!waitingFuture.isEmpty()){
+						Future<DeliveryVehicle> temp = waitingFuture.poll();
+						if(!temp.isDone())
+							temp.resolve(null);
+					}
 
+				}
+				resourceCounter.decrementAndGet();
+				terminate();
+			}
+
+		});
+		countDown.countDown();
 		
 	}
 

@@ -22,13 +22,13 @@ public class MessageBusTest {
 
     @Before
     public void setUp() throws Exception {
-        //Bustest = new MessageBusImpl();
-     //   serviceTest1 = new SellingService();
-       // apiTest1 = new APIService();
-    //    inventoryTest1 = new InventoryService();
-      //  logisticTest1 = new LogisticsService();
-        //timeTest1 = new TimeService();
-        //resourceTest1 = new ResourceService();
+        Bustest = new MessageBusImpl();
+        serviceTest1 = new SellingService();
+        apiTest1 = new APIService();
+        inventoryTest1 = new InventoryService();
+        logisticTest1 = new LogisticsService();
+        timeTest1 = new TimeService();
+        resourceTest1 = new ResourceService();
 
 
     }

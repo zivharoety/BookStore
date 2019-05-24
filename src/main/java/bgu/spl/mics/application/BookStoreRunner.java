@@ -1,28 +1,12 @@
 package bgu.spl.mics.application;
 
-import java.io.FileReader;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.util.*;
-
-import bgu.spl.mics.application.passiveObjects.BookInventoryInfo;
-/*import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;*/
-import bgu.spl.mics.application.passiveObjects.Inventory;
-import bgu.spl.mics.application.passiveObjects.ResourcesHolder;
+import java.io.*;
+import bgu.spl.mics.application.passiveObjects.*;
 import com.google.gson.*;
-import com.google.gson.internal.LinkedTreeMap;
 import com.google.gson.stream.JsonReader;
-import com.sun.tools.doclets.formats.html.SourceToHTMLConverter;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.InputStream;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+
 
 
 /** This is the Main class of the application. You should parse the input file, 
@@ -31,12 +15,17 @@ import java.nio.file.Paths;
  */
 public class BookStoreRunner {
     public static void main(String[] args) {
-     //   JSONParser parser = new JSONParser();
-       // BookInventoryInfo[] inventoryInfo ;
-        Gson gson= new Gson();
-       try {
-            JsonReader reader = new JsonReader(new FileReader("/Users/guyofeck/Documents/spl/Assingment2.rar/Assingment2/json.txt"));
-            JsonParser parser = gson.fromJson(reader,JsonParser.class);
+        String args0 = args[0];
+        String args1 = args[1];
+        String args2 = args[2];
+        String args3 = args[3];
+        String args4 = args[4];
+
+        Gson gson = new Gson();
+        JsonParser toPrint = null;
+        try {
+            JsonReader reader = new JsonReader(new FileReader(args0));
+            JsonParser parser = gson.fromJson(reader, JsonParser.class);
             Inventory inventory = Inventory.getInstance();
             parser.setSema();
             inventory.load(parser.initialInventory);
@@ -44,19 +33,51 @@ public class BookStoreRunner {
             resourceHolder.load(parser.initialResources[0].vehicles);
             parser.services.setCustomers();
             parser.services.startProgram();
+            toPrint = parser;
+            for(Thread t :parser.services.threadList) {
+               try {
+                    t.join();
+                } catch (InterruptedException ignored) {
 
-            System.out.println(parser.initialResources[0].vehicles[0].getLicense());
+                }
+            }
+            }catch (FileNotFoundException e) {
+                e.printStackTrace();
+            }
+
+           try (FileOutputStream temp1 = new FileOutputStream(new File(args1))) {
+                try (ObjectOutputStream customers = new ObjectOutputStream(temp1)) {
+                    customers.writeObject(toPrint.services.customerMap);
+
+                } catch (FileNotFoundException e) {
+                } catch (IOException e) {
+                }
+            } catch (FileNotFoundException e1) {
+                e1.printStackTrace();
+            } catch (IOException e1) {
+                e1.printStackTrace();
+            }
+
+            Inventory.getInstance().printInventoryToFile(args2);
+            MoneyRegister.getInstance().printOrderReceipts(args3);
 
 
+            try (FileOutputStream temp2 = new FileOutputStream(new File(args4))) {
+                try (ObjectOutputStream moneyRegisterPrinter = new ObjectOutputStream(temp2)) {
+                    moneyRegisterPrinter.writeObject(MoneyRegister.getInstance());
 
-
+                } catch (FileNotFoundException e) {
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
-        catch(FileNotFoundException i){}
-
-
-
-
-
     }
 
-}
+
+

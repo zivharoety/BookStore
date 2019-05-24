@@ -2,14 +2,14 @@ package bgu.spl.mics.application.services;
 
 import bgu.spl.mics.Future;
 import bgu.spl.mics.MicroService;
-import bgu.spl.mics.application.messages.DeliveryEvent;
 import bgu.spl.mics.application.messages.BookOrderEvent;
+import bgu.spl.mics.application.messages.DeliveryEvent;
 import bgu.spl.mics.application.messages.Tick;
 import bgu.spl.mics.application.passiveObjects.*;
 import bgu.spl.mics.Pair;
 // import jdk.incubator.http.internal.common.Pair;
 import java.util.LinkedList;
-
+import java.util.concurrent.CountDownLatch;
 
 
 /**
@@ -26,10 +26,16 @@ public class APIService extends MicroService{
 	private Customer myCustomer;
 	private Future<OrderReceipt> futureOrder;
 	private int orderId;
+	private CountDownLatch countDown;
+	private LinkedList<Pair> currOrder;
 
-	public APIService(String name) {
+	public APIService(String name, Customer c, CountDownLatch countD){
 		super(name);
+		this.myCustomer = c;
+		this.orderSchedule = c.sortAndGetList();
 		orderId = 0;
+		this.countDown = countD;
+		currOrder = new LinkedList<>();
 	}
 
 
@@ -37,32 +43,42 @@ public class APIService extends MicroService{
 	@Override
 	protected void initialize() {
 		subscribeBroadcast(Tick.class , (Tick message)->{
-			while ( message.getTick() == orderSchedule.getFirst().getSecond()){
-				Pair toOrder = orderSchedule.removeFirst();
-				BookOrderEvent order = new BookOrderEvent(myCustomer , toOrder.getFirst(),toOrder.getSecond(),orderId);
-				orderId++;
-				futureOrder = sendEvent(order);
-				if(futureOrder.get() != null){
-					DeliveryEvent deliveryEvent = new DeliveryEvent(myCustomer);
-					sendEvent(deliveryEvent);
+			if(message.getTick()==message.getDuration()){
+				terminate();
+			}
+			boolean toRun = true;
+			if(orderSchedule.size() > 0) {
+				while (toRun && message.getTick() == orderSchedule.getFirst().getSecond()) {
+					int curr = message.getTick();
+					Pair toOrder = orderSchedule.removeFirst();
+						BookOrderEvent order = new BookOrderEvent(myCustomer, toOrder.getFirst(), toOrder.getSecond(), orderId);
+						orderId++;
+						futureOrder = sendEvent(order);
+						if (futureOrder.get() != null) {
+							DeliveryEvent deliveryEvent = new DeliveryEvent(myCustomer);
+							sendEvent(deliveryEvent);
+							futureOrder = null;
+						}
+
+						if (orderSchedule.size() == 0 || orderSchedule.getFirst().getSecond() != curr)
+							toRun =false;
+				//	}
+
+
 				}
 			}
 		});
+		countDown.countDown();
+
 	}
 
 	public LinkedList<Pair> getOrderSchedule(){
 		return orderSchedule;
 	}
 
-	public void setOrderSchedule(LinkedList<Pair> orderSchedule) {
-		this.orderSchedule = orderSchedule;
-	}
-
 	public Customer getMyCustomer() {
 		return myCustomer;
 	}
 
-	public void setMyCustomer(Customer myCustomer) {
-		this.myCustomer = myCustomer;
-	}
+
 }

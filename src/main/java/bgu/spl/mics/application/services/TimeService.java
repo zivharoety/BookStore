@@ -6,6 +6,11 @@ import bgu.spl.mics.MicroService;
 import bgu.spl.mics.application.passiveObjects.*;
 import bgu.spl.mics.application.messages.Tick;
 
+import java.sql.Time;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.concurrent.CountDownLatch;
+
 /**
  * TimeService is the global system timer There is only one instance of this micro-service.
  * It keeps track of the amount of ticks passed since initialization and notifies
@@ -16,28 +21,49 @@ import bgu.spl.mics.application.messages.Tick;
  * You can add private fields and public methods to this class.
  * You MAY change constructor signatures and even add new public constructors.
  */
-public class TimeService extends MicroService{
+public class TimeService extends MicroService {
 	private int duration;
 	private int speed;
+	private TimerTask timerTask;
+	private Timer timer;
+	private CountDownLatch countDown;
 
-	public TimeService(int speed, int duration) {
+	private int currTick;
+
+	public TimeService(int speed, int duration, CountDownLatch countD) {
 		super("time");
-		super.bus = MessageBusImpl.getInstance();
+		this.countDown = countD;
 		this.duration = duration;
 		this.speed = speed;
+		this.currTick = 0;
+		this.timer = new Timer();
+		this.timerTask = new TimerTask() {
+			@Override
+			public void run() {
+				currTick++;
+				if (currTick == duration) {
+					sendBroadcast(new Tick(currTick, duration));
+					timerTask.cancel();
+					timer.cancel();
+					terminate();
+				}
+				else{
+					sendBroadcast(new Tick(currTick, duration));
+				}
+			}
 
+		};
 	}
+
 
 	@Override
 	protected void initialize() {
-		for(int i=1 ; i <= duration ; i++){
-			sendBroadcast(new Tick(i));
-			try {
-				Thread.sleep(speed);
+		timer.schedule(timerTask,speed,speed);
+		subscribeBroadcast(Tick.class,(Tick message)->{
+			if(message.getTick()==message.getDuration()) {
+				terminate();
 			}
-			catch(InterruptedException ignored){}
-		}
-		terminate();
-		
+		});
 	}
 }
+
